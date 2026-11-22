@@ -51,49 +51,23 @@ theorem exists_factorization_of_sum_order (z₀ : ℂ) (r R₁ : ℝ) (hR : R₁
       apply hρ₀
       have h0 : analyticOrderAt f ρ₀ = 0 := hanρ₀.analyticOrderAt_eq_zero.mpr hne
       simp [analyticOrderNatAt, h0]
-    obtain ⟨g, hg⟩ : ∃ g : ℂ → ℂ, g = dslope f ρ₀ := ⟨_, rfl⟩
-    have hfg : ∀ z, f z = (z - ρ₀) * g z := by
-      intro z
-      have h := sub_smul_dslope f ρ₀ z
-      rw [hfρ₀, sub_zero, smul_eq_mul, ← hg] at h
-      exact h.symm
-    have hgd : DifferentiableOn ℂ g (Metric.closedBall z₀ r) := by
-      rw [hg]
-      exact (Complex.differentiableOn_dslope (closedBall_mem_nhds_of_mem_closedBall_lt hR hρ₀B)).mpr hf
-    have hfeq : f = (fun z : ℂ => z - ρ₀) * g := funext fun z => hfg z
-    have key : ∀ ρ ∈ Z,
-        analyticOrderAt f ρ = (if ρ = ρ₀ then 1 else 0) + analyticOrderAt g ρ := by
-      intro ρ hρ
-      have hB := hZ ρ hρ
-      have hga : AnalyticAt ℂ g ρ := hgd.analyticAt (closedBall_mem_nhds_of_mem_closedBall_lt hR hB)
-      have hla : AnalyticAt ℂ (fun z : ℂ => z - ρ₀) ρ := analyticAt_id.sub analyticAt_const
-      rw [hfeq, analyticOrderAt_mul hla hga]
-      congr 1
-      split_ifs with hρρ₀
-      · rw [hρρ₀]
-        have hl : AnalyticAt ℂ (fun z : ℂ => z - ρ₀) ρ₀ := analyticAt_id.sub analyticAt_const
-        have h1 := (hl.analyticOrderAt_eq_natCast (n := 1)).mpr
-          ⟨fun _ => 1, analyticAt_const, one_ne_zero, Filter.Eventually.of_forall fun z => by simp⟩
-        simpa using h1
-      · exact hla.analyticOrderAt_eq_zero.mpr (sub_ne_zero.mpr hρρ₀)
-    have keyN : ∀ ρ ∈ Z,
+    let g := dslope f ρ₀
+    have hfg (z : ℂ) : f z = (z - ρ₀) * g z := (sub_smul_dslope_of_zero hfρ₀ z).symm
+    have hgd : DifferentiableOn ℂ g (Metric.closedBall z₀ r) :=
+      (Complex.differentiableOn_dslope (closedBall_mem_nhds_of_mem_closedBall_lt hR hρ₀B)).mpr hf
+    have hfeq : f = (fun z : ℂ => z - ρ₀) * g := funext hfg
+    have keyN (ρ) (hρ : ρ ∈ Z) :
         analyticOrderNatAt f ρ = (if ρ = ρ₀ then 1 else 0) + analyticOrderNatAt g ρ ∧
           analyticOrderAt g ρ ≠ ⊤ := by
-      intro ρ hρ
-      have hk := key ρ hρ
+      have ha := hgd.analyticAt (closedBall_mem_nhds_of_mem_closedBall_lt hR (hZ ρ hρ))
       have ht := htop ρ hρ
-      have hgt : analyticOrderAt g ρ ≠ ⊤ := by
-        intro h
-        apply ht
-        rw [hk, h]
-        simp
+      rw [hfeq] at ht ⊢
+      have hgt : analyticOrderAt g ρ ≠ ⊤ :=
+        fun h => ht (analyticOrderAt_mul_eq_top_of_right h)
       refine ⟨?_, hgt⟩
-      have h1 : ((analyticOrderNatAt f ρ : ℕ) : ℕ∞) =
-          (((if ρ = ρ₀ then 1 else 0) + analyticOrderNatAt g ρ : ℕ) : ℕ∞) := by
-        rw [natCast_analyticOrderNatAt_of_ne_top ht, hk, Nat.cast_add,
-          natCast_analyticOrderNatAt_of_ne_top hgt]
-        split_ifs <;> simp
-      exact_mod_cast h1
+      rw [analyticOrderNatAt_mul (analyticAt_id.sub analyticAt_const) ha (by
+        by_cases h : ρ = ρ₀ <;> simp [h]) hgt]
+      by_cases h : ρ = ρ₀ <;> simp [analyticOrderNatAt, h]
     have hsumg : ∑ ρ ∈ Z, analyticOrderNatAt g ρ = n := by
       have hs : ∑ ρ ∈ Z, analyticOrderNatAt f ρ =
           ∑ ρ ∈ Z, ((if ρ = ρ₀ then 1 else 0) + analyticOrderNatAt g ρ) :=
@@ -105,16 +79,13 @@ theorem exists_factorization_of_sum_order (z₀ : ℂ) (r R₁ : ℝ) (hR : R₁
       fun z hz h0 => hzero z hz (by rw [hfg z, h0, mul_zero])
     obtain ⟨h, hhd, hh0, hhf⟩ := ih g Z hgd hZ hzg (fun ρ hρ => (keyN ρ hρ).2) hsumg
     refine ⟨h, hhd, hh0, fun z hz => ?_⟩
-    have hone : ∏ ρ ∈ Z, (z - ρ) ^ (if ρ = ρ₀ then 1 else 0) = z - ρ₀ := by
-      rw [Finset.prod_eq_single ρ₀ (fun b _ hb => by simp [hb]) (fun h => absurd hρ₀Z h)]
-      simp
     have hprod : ∏ ρ ∈ Z, (z - ρ) ^ analyticOrderNatAt f ρ =
         (z - ρ₀) * ∏ ρ ∈ Z, (z - ρ) ^ analyticOrderNatAt g ρ := by
-      calc ∏ ρ ∈ Z, (z - ρ) ^ analyticOrderNatAt f ρ
-          = ∏ ρ ∈ Z, ((z - ρ) ^ (if ρ = ρ₀ then 1 else 0) * (z - ρ) ^ analyticOrderNatAt g ρ) :=
-            Finset.prod_congr rfl fun ρ hρ => by rw [(keyN ρ hρ).1, pow_add]
-        _ = (z - ρ₀) * ∏ ρ ∈ Z, (z - ρ) ^ analyticOrderNatAt g ρ := by
-            rw [Finset.prod_mul_distrib, hone]
+      calc _ = ∏ ρ ∈ Z, ((if ρ = ρ₀ then z - ρ₀ else 1) * (z - ρ) ^ analyticOrderNatAt g ρ) :=
+                Finset.prod_congr rfl fun ρ hρ => by
+                  rw [(keyN ρ hρ).1, pow_add]
+                  split_ifs with h <;> simp_all
+           _ = _ := by rw [Finset.prod_mul_distrib]; simp [hρ₀Z]
     rw [hfg z, hhf z hz, hprod, mul_assoc]
 
 theorem zeroFactorization : ZeroFactor := by
@@ -128,25 +99,13 @@ theorem zeroFactorization : ZeroFactor := by
     intro x hx hev
     have hEq := hU.eqOn_zero_of_preconnected_of_eventuallyEq_zero hpre hx hev
     exact hf0 (hEq hz₀)
-  have hisol : ∀ x ∈ Metric.ball z₀ r, ∀ᶠ w in 𝓝[≠] x, f w ≠ 0 := fun x hx =>
-    ((hU x hx).eventually_eq_zero_or_eventually_ne_zero).resolve_left (hnotzero x hx)
   have htop : ∀ x ∈ Metric.ball z₀ r, analyticOrderAt f x ≠ ⊤ := fun x hx h =>
     hnotzero x hx (analyticOrderAt_eq_top.mp h)
-  have hSsub : Metric.closedBall z₀ R₁ ∩ f ⁻¹' {0} ⊆ Metric.ball z₀ r :=
-    fun x hx => Metric.closedBall_subset_ball hR hx.1
-  have hScpt : IsCompact (Metric.closedBall z₀ R₁ ∩ f ⁻¹' {0}) :=
-    (isCompact_closedBall z₀ R₁).of_isClosed_subset
-      ((hf.continuousOn.mono (Metric.closedBall_subset_closedBall hR.le)).preimage_isClosed_of_isClosed
-        Metric.isClosed_closedBall isClosed_singleton)
-      Set.inter_subset_left
-  have hSdisc : DiscreteTopology (Metric.closedBall z₀ R₁ ∩ f ⁻¹' {0} : Set ℂ) := by
-    rw [discreteTopology_subtype_iff]
-    intro x hx
-    refine Filter.inf_principal_eq_bot.mpr ?_
-    filter_upwards [hisol x (hSsub hx)] with w hw hwS
-    exact hw hwS.2
+  have hnz := hU.preimage_zero_mem_codiscreteWithin hf0 hz₀ ⟨⟨z₀, hz₀⟩, hpre⟩
   have hfin : (Metric.closedBall z₀ R₁ ∩ f ⁻¹' {0}).Finite := by
-    exact hScpt.finite ⟨hSdisc⟩
+    simpa only [Set.sdiff_eq, Set.compl_preimage, compl_compl] using
+      (isCompact_closedBall z₀ R₁).finite_sdiff_of_mem_codiscreteWithin
+        (Filter.codiscreteWithin_mono (Metric.closedBall_subset_ball hR) hnz)
   have hmem : ∀ ρ : ℂ, ρ ∈ hfin.toFinset ↔ (ρ ∈ Metric.closedBall z₀ R₁ ∧ f ρ = 0) := by
     intro ρ
     rw [Set.Finite.mem_toFinset]
