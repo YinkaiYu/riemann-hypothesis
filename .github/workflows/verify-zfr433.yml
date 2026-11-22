@@ -1,0 +1,71 @@
+name: Exact Lean 4.33.1 focused proof
+on:
+  push:
+    branches: [verification/zfr-4331]
+permissions:
+  contents: read
+jobs:
+  exact:
+    name: Original import chain and kernel replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      LEAN_ABORT_ON_PANIC: "1"
+      LAKE_ARTIFACT_CACHE: "false"
+      MATHLIB_CACHE_GET_URL: https://cache.mathlib.org/mathlib4
+      MODULE: Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound
+      BASE: 2dea99006976a5104032e495d7513dee40fbb5ca
+      CANDIDATE: e8f41b50ee8019a6c98b83e050bec6820da7b06a
+    steps:
+      - name: Obtain fixed project and unchanged source dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          upstream="https://raw.githubusercontent.com/leanprover-community/riemann-hypothesis/$BASE"
+          fork="https://raw.githubusercontent.com/YinkaiYu/riemann-hypothesis/$CANDIDATE"
+          for p in lean-toolchain lakefile.toml lake-manifest.json src/Formalism/Statement.lean src/Formalism/StatementOC.lean src/Formalism/ZeroFreeRegion/Statement.lean src/Formalism/ZeroFreeRegion/SmallHeightLogDeriv.lean; do
+            mkdir -p "$(dirname "$p")"
+            curl --retry 4 -fsSL "$upstream/$p" -o "$p"
+          done
+          target="src/${MODULE//.//}.lean"
+          mkdir -p "$(dirname "$target")"
+          curl --retry 4 -fsSL "$fork/$target" -o "$target"
+          sha256sum "$target"
+          grep -Fx 'leanprover/lean4:v4.33.1' lean-toolchain
+          test "$(jq -r '.packages[] | select(.name == "mathlib") | .rev' lake-manifest.json)" = 0df444a360eaa60ab8c11dca51a86af692955474
+          grep -H '^import ' src/Formalism/*.lean src/Formalism/ZeroFreeRegion/*.lean "$target"
+          df -h .
+      - name: Install upstream toolchain
+        run: |
+          set -eu
+          curl --retry 4 -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -o "$RUNNER_TEMP/elan-init.sh"
+          sh "$RUNNER_TEMP/elan-init.sh" -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          "$HOME/.elan/bin/lean" --version
+      - name: Fetch Mathlib's pinned official cache
+        run: |
+          set -eu
+          lake exe mathlib/cache get Mathlib
+          df -h .
+      - name: Build the original import chain and proposed module from source
+        run: lake build "+$MODULE:olean"
+      - name: Replay proposed module and audit axioms
+        shell: bash
+        run: |
+          set -euo pipefail
+          lake env leanchecker -v "$MODULE"
+          printf 'import %s\n' "$MODULE" > Audit.lean
+          cat >> Audit.lean <<'EOF'
+          import Lean.Util.CollectAxioms
+          open Lean in
+          run_cmd do
+            let allowed := #[`propext, `Classical.choice, `Quot.sound]
+            for decl in #[`Formalism.ZF.zflb_exists_log, `Formalism.ZF.logDerivBoundOnBall] do
+              let actual ← collectAxioms decl
+              for axiomName in actual do
+                unless allowed.contains axiomName do
+                  throwError "unexpected axiom {axiomName} for {decl}"
+          #print axioms Formalism.ZF.zflb_exists_log
+          #print axioms Formalism.ZF.logDerivBoundOnBall
+          EOF
+          lake env lean Audit.lean
