@@ -1,4 +1,4 @@
-name: Exact Lean 4.33.1 focused proof
+name: Exact upstream analytic proof chain
 on:
   push:
     branches: [verification/zfr-4331]
@@ -6,7 +6,7 @@ permissions:
   contents: read
 jobs:
   exact:
-    name: Original import chain and kernel replay
+    name: Build changed modules and mathematical clients
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -15,26 +15,15 @@ jobs:
       MATHLIB_CACHE_GET_URL: https://cache.mathlib.org/mathlib4
       MODULE: Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound
       BASE: 2dea99006976a5104032e495d7513dee40fbb5ca
-      CANDIDATE: e8f41b50ee8019a6c98b83e050bec6820da7b06a
+      CANDIDATE: 228e71c84e4835b1cdb044d24b553c0c00ae3e55
     steps:
       - name: Obtain fixed project and unchanged source dependencies
         shell: bash
         run: |
           set -euo pipefail
-          upstream="https://raw.githubusercontent.com/leanprover-community/riemann-hypothesis/$BASE"
-          fork="https://raw.githubusercontent.com/YinkaiYu/riemann-hypothesis/$CANDIDATE"
-          for p in lean-toolchain lakefile.toml lake-manifest.json src/Formalism/Statement.lean src/Formalism/StatementOC.lean src/Formalism/ZeroFreeRegion/Statement.lean src/Formalism/ZeroFreeRegion/SmallHeightLogDeriv.lean; do
-            mkdir -p "$(dirname "$p")"
-            curl --retry 4 -fsSL "$upstream/$p" -o "$p"
-          done
-          target="src/${MODULE//.//}.lean"
-          mkdir -p "$(dirname "$target")"
-          curl --retry 4 -fsSL "$fork/$target" -o "$target"
-          sha256sum "$target"
+          curl --retry 3 -fsSL "https://codeload.github.com/YinkaiYu/riemann-hypothesis/tar.gz/$CANDIDATE" | tar -xz --strip-components=1
           grep -Fx 'leanprover/lean4:v4.33.1' lean-toolchain
           test "$(jq -r '.packages[] | select(.name == "mathlib") | .rev' lake-manifest.json)" = 0df444a360eaa60ab8c11dca51a86af692955474
-          grep -H '^import ' src/Formalism/*.lean src/Formalism/ZeroFreeRegion/*.lean "$target"
-          df -h .
       - name: Install upstream toolchain
         run: |
           set -eu
@@ -47,25 +36,39 @@ jobs:
           set -eu
           lake exe mathlib/cache get Mathlib
           df -h .
-      - name: Build the original import chain and proposed module from source
-        run: lake build "+$MODULE:olean"
-      - name: Replay proposed module and audit axioms
+      - name: Build modified modules and their public clients
         shell: bash
         run: |
-          set -euo pipefail
-          lake env leanchecker -v "$MODULE"
-          printf 'import %s\n' "$MODULE" > Audit.lean
-          cat >> Audit.lean <<'EOF'
+          set -eu
+          lake build +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFactor:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LandauLocalOf:olean +Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.ExistsLocalZeroExpansionOfBound:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ThreeFourOne:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFreeOf:olean +Formalism.ZeroFreeRegion.FinalZFR:olean +Formalism.ZeroFreeRegion.LogDerivRegion:olean
+      - name: Kernel replay and theorem audit
+        shell: bash
+        run: |
+          set -eu
+          for module in Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFactor Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LandauLocalOf Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.ExistsLocalZeroExpansionOfBound Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ThreeFourOne Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFreeOf Formalism.ZeroFreeRegion.FinalZFR Formalism.ZeroFreeRegion.LogDerivRegion; do
+            lake env leanchecker "$module"
+            echo "Replayed $module"
+          done
+          cat >Audit.lean <<'EOF'
+          import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound
+          import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFactor
+          import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LandauLocalOf
+          import Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.ExistsLocalZeroExpansionOfBound
+          import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ThreeFourOne
+          import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFreeOf
+          import Formalism.ZeroFreeRegion.FinalZFR
+          import Formalism.ZeroFreeRegion.LogDerivRegion
           import Lean.Util.CollectAxioms
           open Lean in
           run_cmd do
             let allowed := #[`propext, `Classical.choice, `Quot.sound]
-            for decl in #[`Formalism.ZF.zflb_exists_log, `Formalism.ZF.logDerivBoundOnBall] do
-              let actual ← collectAxioms decl
-              for axiomName in actual do
+            for decl in #[`Formalism.ZF.zeroFreeRegion, `Formalism.ZF.landauLocal,
+                `Formalism.ZeroFreeDirichlet.exists_localZeroExpansion_of_bound] do
+              for axiomName in ← collectAxioms decl do
                 unless allowed.contains axiomName do
                   throwError "unexpected axiom {axiomName} for {decl}"
-          #print axioms Formalism.ZF.zflb_exists_log
-          #print axioms Formalism.ZF.logDerivBoundOnBall
+          #print axioms Formalism.ZF.zeroFreeRegion
+          #print axioms Formalism.ZF.landauLocal
+          #print axioms Formalism.ZeroFreeDirichlet.exists_localZeroExpansion_of_bound
           EOF
           lake env lean Audit.lean
