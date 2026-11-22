@@ -1,13 +1,10 @@
-import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.DzDifferentiableOn
-import Formalism.SizeWindowBrackets.SlopesFromSizeAndCount
+import Mathlib
 
 open Complex Filter Topology
 
 noncomputable section
 
 namespace Formalism.LFunctionChainParameters.LChain6.Chi8
-
-open Formalism.ZF.ComplexPowerDifferenceIntegral
 
 def chi : DirichletCharacter ℂ 8 := ZMod.χ₈.ringHomComp (Int.castRingHom ℂ)
 

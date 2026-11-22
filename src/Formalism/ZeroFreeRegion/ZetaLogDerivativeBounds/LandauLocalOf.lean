@@ -9,8 +9,10 @@ namespace Formalism.ZF
 lemma landauLocal_logDeriv_prod (Z : Finset ℂ) (m : ℂ → ℕ) (z : ℂ)
     (hz : ∀ ρ ∈ Z, z - ρ ≠ 0) :
     logDeriv (fun w => ∏ ρ ∈ Z, (w - ρ) ^ m ρ) z = ∑ ρ ∈ Z, (m ρ : ℂ) / (z - ρ) := by
-  rw [← Finset.prod_fn Z (fun ρ (w : ℂ) => (w - ρ) ^ m ρ), logDeriv_prod (f := fun ρ w : ℂ => (w - ρ) ^ m ρ)
-    (fun ρ hρ => pow_ne_zero _ (hz ρ hρ)) (fun _ _ => by fun_prop)]
+  trans ∑ ρ ∈ Z, logDeriv (fun w : ℂ => (w - ρ) ^ m ρ) z
+  · simpa only [Finset.prod_fn] using logDeriv_prod (s := Z) (x := z)
+      (f := fun ρ w : ℂ => (w - ρ) ^ m ρ)
+      (fun ρ hρ => pow_ne_zero _ (hz ρ hρ)) (fun _ _ => by fun_prop)
   refine Finset.sum_congr rfl fun ρ _ => ?_
   rw [logDeriv_fun_pow (f := fun w : ℂ => w - ρ) (by fun_prop)]
   simp [logDeriv_apply, div_eq_mul_inv]

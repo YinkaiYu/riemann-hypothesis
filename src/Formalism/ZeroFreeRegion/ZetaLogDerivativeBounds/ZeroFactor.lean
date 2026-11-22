@@ -65,7 +65,7 @@ theorem exists_factorization_of_sum_order (z₀ : ℂ) (r R₁ : ℝ) (hR : R₁
       have hgt : analyticOrderAt g ρ ≠ ⊤ :=
         fun h => ht (analyticOrderAt_mul_eq_top_of_right h)
       refine ⟨?_, hgt⟩
-      rw [analyticOrderNatAt_mul (analyticAt_id.sub analyticAt_const) ha (by
+      rw [analyticOrderNatAt_mul (f := fun z : ℂ => z - ρ₀) (by fun_prop) ha (by
         by_cases h : ρ = ρ₀ <;> simp [h]) hgt]
       by_cases h : ρ = ρ₀ <;> simp [analyticOrderNatAt, h]
     have hsumg : ∑ ρ ∈ Z, analyticOrderNatAt g ρ = n := by
@@ -73,7 +73,7 @@ theorem exists_factorization_of_sum_order (z₀ : ℂ) (r R₁ : ℝ) (hR : R₁
           ∑ ρ ∈ Z, ((if ρ = ρ₀ then 1 else 0) + analyticOrderNatAt g ρ) :=
         Finset.sum_congr rfl fun ρ hρ => (keyN ρ hρ).1
       rw [hs, Finset.sum_add_distrib] at hsum
-      simp only [Finset.sum_ite_eq', hρ₀Z, if_true] at hsum
+      simp [hρ₀Z] at hsum
       omega
     have hzg : ∀ z ∈ Metric.closedBall z₀ R₁, g z = 0 → z ∈ Z :=
       fun z hz h0 => hzero z hz (by rw [hfg z, h0, mul_zero])
@@ -103,7 +103,7 @@ theorem zeroFactorization : ZeroFactor := by
     hnotzero x hx (analyticOrderAt_eq_top.mp h)
   have hnz := hU.preimage_zero_mem_codiscreteWithin hf0 hz₀ ⟨⟨z₀, hz₀⟩, hpre⟩
   have hfin : (Metric.closedBall z₀ R₁ ∩ f ⁻¹' {0}).Finite := by
-    simpa only [Set.sdiff_eq, Set.compl_preimage, compl_compl] using
+    simpa only [Set.sdiff_eq, Set.preimage_compl, compl_compl] using
       (isCompact_closedBall z₀ R₁).finite_sdiff_of_mem_codiscreteWithin
         (Filter.codiscreteWithin_mono (Metric.closedBall_subset_ball hR) hnz)
   have hmem : ∀ ρ : ℂ, ρ ∈ hfin.toFinset ↔ (ρ ∈ Metric.closedBall z₀ R₁ ∧ f ρ = 0) := by
