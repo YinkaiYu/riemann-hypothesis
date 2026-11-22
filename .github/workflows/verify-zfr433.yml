@@ -15,7 +15,7 @@ jobs:
       MATHLIB_CACHE_GET_URL: https://cache.mathlib.org/mathlib4
       MODULE: Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound
       BASE: 2dea99006976a5104032e495d7513dee40fbb5ca
-      CANDIDATE: 228e71c84e4835b1cdb044d24b553c0c00ae3e55
+      CANDIDATE: 170cdf7af6cc402774a1a0fde8e2fbcffc07bbab
     steps:
       - name: Obtain fixed project and unchanged source dependencies
         shell: bash
@@ -40,12 +40,12 @@ jobs:
         shell: bash
         run: |
           set -eu
-          lake build +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFactor:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LandauLocalOf:olean +Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.ExistsLocalZeroExpansionOfBound:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ThreeFourOne:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFreeOf:olean +Formalism.ZeroFreeRegion.FinalZFR:olean +Formalism.ZeroFreeRegion.LogDerivRegion:olean
+          lake build +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFactor:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LandauLocalOf:olean +Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.ExistsLocalZeroExpansionOfBound:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ThreeFourOne:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFreeOf:olean +Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.ZetaNegReal:olean +Formalism.SizeWindowBrackets.ChainSlopeWindows.ChiEightNoRealZeroHypothesis:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.MellinRemainder:olean +Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZetaGrowth:olean +Formalism.ZeroFreeRegion.FinalZFR:olean +Formalism.ZeroFreeRegion.LogDerivRegion:olean +Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.BqGrowth:olean +Formalism.LandauZeroFreeBounds.FinalSiegel:olean +Formalism.SizeWindowBrackets.ChainSlopeWindows.AnalyticFirstToLatticeDiscriminant:olean
       - name: Kernel replay and theorem audit
         shell: bash
         run: |
           set -eu
-          for module in Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFactor Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LandauLocalOf Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.ExistsLocalZeroExpansionOfBound Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ThreeFourOne Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFreeOf Formalism.ZeroFreeRegion.FinalZFR Formalism.ZeroFreeRegion.LogDerivRegion; do
+          for module in Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFactor Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LandauLocalOf Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.ExistsLocalZeroExpansionOfBound Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ThreeFourOne Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFreeOf Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.ZetaNegReal Formalism.SizeWindowBrackets.ChainSlopeWindows.ChiEightNoRealZeroHypothesis Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.MellinRemainder Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZetaGrowth Formalism.ZeroFreeRegion.FinalZFR Formalism.ZeroFreeRegion.LogDerivRegion Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.BqGrowth Formalism.LandauZeroFreeBounds.FinalSiegel Formalism.SizeWindowBrackets.ChainSlopeWindows.AnalyticFirstToLatticeDiscriminant; do
             lake env leanchecker "$module"
             echo "Replayed $module"
           done
@@ -56,13 +56,21 @@ jobs:
           import Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.ExistsLocalZeroExpansionOfBound
           import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ThreeFourOne
           import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFreeOf
+          import Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.ZetaNegReal
+          import Formalism.SizeWindowBrackets.ChainSlopeWindows.ChiEightNoRealZeroHypothesis
+          import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.MellinRemainder
+          import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZetaGrowth
           import Formalism.ZeroFreeRegion.FinalZFR
           import Formalism.ZeroFreeRegion.LogDerivRegion
+          import Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.BqGrowth
+          import Formalism.LandauZeroFreeBounds.FinalSiegel
+          import Formalism.SizeWindowBrackets.ChainSlopeWindows.AnalyticFirstToLatticeDiscriminant
           import Lean.Util.CollectAxioms
           open Lean in
           run_cmd do
             let allowed := #[`propext, `Classical.choice, `Quot.sound]
-            for decl in #[`Formalism.ZF.zeroFreeRegion, `Formalism.ZF.landauLocal,
+            for decl in #[`Formalism.ZF.zeroFreeRegion, `Formalism.ZF.landauLocal, `Formalism.ZF.growthBound,
+                `Formalism.ZeroFreeDirichlet.zeta_negative_real_axis,
                 `Formalism.ZeroFreeDirichlet.exists_localZeroExpansion_of_bound] do
               for axiomName in ← collectAxioms decl do
                 unless allowed.contains axiomName do
