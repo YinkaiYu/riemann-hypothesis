@@ -9,6 +9,7 @@ public import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZetaGrowth
 public import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZetaInvBound
 public import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.SmallHeight
 public import Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ZeroFreeOf
+public import Formalism.ZeroFreeRegion.SingleFile
 
 @[expose] public section
 
@@ -18,8 +19,7 @@ namespace Formalism.ZF
 
 theorem landauLocal : LandauLocal := localZeroExpansionOfFactorization zeroFactorization logDerivBoundOnBall
 
-theorem zeroFreeRegion : ZeroFreeRegion :=
-  classicalZeroFreeRegionOfBounds mertensInequality logDerivBoundRightHalfPlane growthBound zetaInvBound_statement
-    zeroFreeBoundedHeight landauLocal
+theorem zeroFreeRegion : ZeroFreeRegion := zeroFreeRegion_compressed
 
 end Formalism.ZF
+
