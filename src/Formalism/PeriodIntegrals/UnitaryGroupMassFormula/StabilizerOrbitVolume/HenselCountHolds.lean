@@ -28,10 +28,7 @@ theorem hensel_main (μ : Measure V) (ν : Measure X) [μ.IsAddHaarMeasure] [ν.
 
 end Hensel
 
-theorem henselCount_holds : HenselCount := by
-  intro V X _ _ _ _ _ _ _ _ _ _ μ ν hμ hν Λ H hΛo _ hΛa hHo hHc D hD G y hG n h hh
-  have := hμ
-  have := hν
-  exact hensel_main μ ν Λ H hΛo hΛa hHo hHc D hD G y hG h hh n
+theorem henselCount_holds : HenselCount :=
+  PI.VolStabS.henselCount_holds
 
 end PI.VolStabSW

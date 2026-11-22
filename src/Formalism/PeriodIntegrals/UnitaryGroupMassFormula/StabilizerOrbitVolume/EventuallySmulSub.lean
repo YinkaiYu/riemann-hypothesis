@@ -19,38 +19,28 @@ def smulSub {W : Type} [AddCommGroup W] [Module K W] (t : K) (P : AddSubgroup W)
 
 omit [TopologicalSpace K] in
 theorem mem_smulSub {W : Type} [AddCommGroup W] [Module K W] (t : K) (P : AddSubgroup W) (z : W) :
-    z ∈ smulSub t P ↔ ∃ p ∈ P, t • p = z := by
-  simp only [smulSub, AddSubgroup.mem_map, DistribMulAction.toAddMonoidHom_apply]
+    z ∈ smulSub t P ↔ ∃ p ∈ P, t • p = z :=
+  PI.VolStabS.mem_smulSub t P z
 
 theorem coe_smulSub {W : Type} [AddCommGroup W] [Module K W] (t : K) (P : AddSubgroup W) :
-    (smulSub t P : Set W) = (fun p => t • p) '' (P : Set W) := by
-  ext z
-  rw [SetLike.mem_coe, mem_smulSub, Set.mem_image]
-  rfl
+    (smulSub t P : Set W) = (fun p => t • p) '' (P : Set W) :=
+  PI.VolStabS.coe_smulSub t P
 
 theorem isOpen_smulSub {W : Type} [AddCommGroup W] [Module K W] [TopologicalSpace W]
     [ContinuousSMul K W] (t : K) (ht : t ≠ 0) (P : AddSubgroup W) (hP : IsOpen (P : Set W)) :
-    IsOpen (smulSub t P : Set W) := by
-  rw [coe_smulSub]
-  exact isOpenMap_smul₀ ht _ hP
+    IsOpen (smulSub t P : Set W) :=
+  PI.VolStabS.isOpen_smulSub t ht P hP
 
 theorem isCompact_smulSub {W : Type} [AddCommGroup W] [Module K W] [TopologicalSpace W]
     [ContinuousSMul K W] (t : K) (P : AddSubgroup W) (hP : IsCompact (P : Set W)) :
-    IsCompact (smulSub t P : Set W) := by
-  rw [coe_smulSub]
-  exact hP.image (continuous_const_smul t)
+    IsCompact (smulSub t P : Set W) :=
+  PI.VolStabS.isCompact_smulSub t P hP
 
 theorem eventually_smul_sub {W : Type} [AddCommGroup W] [Module K W] [TopologicalSpace W]
     [ContinuousSMul K W] (S : Set W) (hS : IsCompact S) (s : ℕ → K)
     (hs : Tendsto s atTop (𝓝 0)) (N : Set W) (hN : N ∈ 𝓝 (0 : W)) :
-    ∃ k, ∀ p ∈ S, s k • p ∈ N := by
-  have hev : ∀ᶠ c in 𝓝 (0 : K), ∀ p ∈ S, c • p ∈ N :=
-    hS.eventually_forall_of_forall_eventually fun p _ => by
-      have h0 : Tendsto (fun z : K × W => z.1 • z.2) (𝓝 ((0 : K), p)) (𝓝 ((0 : K) • p)) :=
-        continuous_smul.continuousAt
-      rw [zero_smul] at h0
-      exact h0 hN
-  exact (hs.eventually hev).exists
+    ∃ k, ∀ p ∈ S, s k • p ∈ N :=
+  PI.VolStabS.eventually_smul_sub S hS s hs N hN
 
 variable [T2Space X]
 
@@ -59,60 +49,8 @@ theorem reach_of_approx (π : K) (hπ : Tendsto (fun k : ℕ => π ^ k) atTop (�
     (D : V →+ X) (hDc : Continuous D) (hDs : ∀ (t : K) w, D (t • w) = t • D w)
     (P : AddSubgroup X) (hPc : IsCompact (P : Set X))
     (hbase : ∀ p ∈ P, ∃ l ∈ L, p - D l ∈ smulSub π P) :
-    ∀ p ∈ P, ∃ l ∈ L, D l = p := by
-  classical
-  have hbase' : ∀ p ∈ P, ∃ l ∈ L, ∃ q ∈ P, π • q = p - D l := fun p hp => by
-    obtain ⟨l, hl, h⟩ := hbase p hp
-    exact ⟨l, hl, (mem_smulSub π P _).1 h⟩
-  choose! fl hfl fq hfq hrel using hbase'
-  intro p hp
-
-  let ps : ℕ → X := fun k => Nat.rec p (fun _ q => fq q) k
-  have hpsS : ∀ k, ps (k + 1) = fq (ps k) := fun k => rfl
-  have hpsP : ∀ k, ps k ∈ P := by
-    intro k
-    induction k with
-    | zero => exact hp
-    | succ k ih => rw [hpsS]; exact hfq _ ih
-  have hπLk : ∀ k : ℕ, ∀ w ∈ L, π ^ k • w ∈ L := by
-    intro k
-    induction k with
-    | zero => intro w hw; simpa using hw
-    | succ k ih => intro w hw; rw [pow_succ, mul_smul]; exact ih _ (hπL w hw)
-  let σ : ℕ → V := fun k => ∑ i ∈ Finset.range (k + 1), π ^ i • fl (ps i)
-  have hσL : ∀ k, σ k ∈ L := fun k => L.sum_mem fun i _ => hπLk i _ (hfl _ (hpsP i))
-  have hrem : ∀ k, p - D (σ k) = π ^ (k + 1) • ps (k + 1) := by
-    intro k
-    induction k with
-    | zero =>
-      show p - D (∑ i ∈ Finset.range 1, π ^ i • fl (ps i)) = π ^ 1 • fq p
-      rw [Finset.sum_range_one, pow_zero, one_smul, pow_one, hrel p hp]
-      rfl
-    | succ k ih =>
-      have e1 : σ (k + 1) = σ k + π ^ (k + 1) • fl (ps (k + 1)) := Finset.sum_range_succ _ _
-      rw [hpsS (k + 1), e1, map_add, hDs, sub_add_eq_sub_sub, ih, ← smul_sub,
-        ← hrel _ (hpsP (k + 1)), smul_smul, ← pow_succ]
-
-  have hsmallP : ∀ N ∈ 𝓝 (0 : X), ∀ᶠ c in 𝓝 (0 : K), ∀ q ∈ P, c • q ∈ N := fun N hN =>
-    hPc.eventually_forall_of_forall_eventually fun q _ => by
-      have h0 : Tendsto (fun z : K × X => z.1 • z.2) (𝓝 ((0 : K), q)) (𝓝 ((0 : K) • q)) :=
-        continuous_smul.continuousAt
-      rw [zero_smul] at h0
-      exact h0 hN
-  have hπ1 : Tendsto (fun k : ℕ => π ^ (k + 1)) atTop (𝓝 0) := hπ.comp (tendsto_add_atTop_nat 1)
-  have hremT : Tendsto (fun k => p - D (σ k)) atTop (𝓝 0) := by
-    refine Tendsto.congr (fun k => (hrem k).symm) ?_
-    intro N hN
-    exact (hπ1.eventually (hsmallP N hN)).mono fun k hk => hk _ (hpsP (k + 1))
-  have hDT : Tendsto (fun k => D (σ k)) atTop (𝓝 p) := by
-    simpa using (tendsto_const_nhds (x := p)).sub hremT
-
-  obtain ⟨l, hlL, hcl⟩ := hLc (f := Filter.map σ atTop)
-    (Filter.le_principal_iff.2 (Filter.mem_map.2 (Filter.univ_mem' hσL)))
-  refine ⟨l, hlL, ?_⟩
-  have h2 : MapClusterPt (D l) atTop (D ∘ σ) := MapClusterPt.continuousAt_comp hDc.continuousAt hcl
-  exact eq_of_nhds_neBot ((show ClusterPt (D l) (Filter.map (D ∘ σ) atTop) from h2).neBot.mono
-    (inf_le_inf_left _ hDT))
+    ∀ p ∈ P, ∃ l ∈ L, D l = p :=
+  PI.VolStabS.reach_of_approx π hπ L hLc hπL D hDc hDs P hPc hbase
 
 theorem filt_abstract [ContinuousMul K] (π : K) (hπ0 : π ≠ 0) (hπ : Tendsto (fun k : ℕ => π ^ k) atTop (𝓝 0))
     (L : AddSubgroup V) (hLo : IsOpen (L : Set V)) (hLc : IsCompact (L : Set V))
