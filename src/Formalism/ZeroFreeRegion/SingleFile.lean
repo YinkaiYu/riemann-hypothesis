@@ -8,6 +8,7 @@ public import Mathlib.NumberTheory.Harmonic.ZetaAsymp
 public import Mathlib.Analysis.Complex.BorelCaratheodory
 public import Mathlib.Analysis.Complex.HasPrimitives
 public import Mathlib.Analysis.Calculus.LogDeriv
+public import Mathlib.MeasureTheory.Function.Floor
 
 @[expose] public section
 
@@ -22,6 +23,9 @@ open Metric Set Filter MeasureTheory Asymptotics ArithmeticFunction Real Int LSe
 noncomputable section
 abbrev frac := ofReal ∘ fract
 abbrev tail := (Ioi 1).indicator frac
+private lemma measurable_frac : Measurable frac := by
+  unfold frac; exact measurable_ofReal.comp measurable_fract
+private lemma measurable_tail : Measurable tail := measurable_frac.indicator measurableSet_Ioi
 
 lemma frac_bound x : ‖frac x‖ ≤ 1 := by
   simpa [frac,abs_fract] using (fract_lt_one x).le
@@ -36,7 +40,7 @@ lemma entireFormula : 0 < s.re → riemannZeta₁ s = s * (1-(s-1)*remainder s) 
       intro z hz
       have hb x : ‖tail x‖ ≤ 1 := (norm_indicator_le_norm_self frac x).trans (frac_bound x)
       have := mellin_differentiableAt_of_isBigO_rpow (f:=tail) (s:=-z) (a:=0) (b:=-z.re-1)
-        ((locallyIntegrableOn_const (1:ℂ)).mono (by measurability) (by simpa using Eventually.of_forall hb))
+        ((locallyIntegrableOn_const (1:ℂ)).mono (measurable_tail.aestronglyMeasurable) (by simpa using Eventually.of_forall hb))
         (isBigO_of_le _ (by simpa using hb)) (by simpa using hz)
         (by apply IsBigO.of_bound'
             filter_upwards [nhdsWithin_le_nhds (Iio_mem_nhds zero_lt_one)] with x (hx:x<1)
@@ -55,7 +59,7 @@ lemma entireFormula : 0 < s.re → riemannZeta₁ s = s * (1-(s-1)*remainder s) 
   rw [h, ← hi, ← integral_sub
     (integrableOn_Ioi_cpow_of_lt (by simpa) zero_lt_one)
     ((integrableOn_Ioi_cpow_of_lt (by simp;linarith) zero_lt_one).mul_bdd
-      (by fun_prop : Measurable frac).aestronglyMeasurable (.of_forall frac_bound))]
+      (measurable_frac).aestronglyMeasurable (.of_forall frac_bound))]
   congr 1; refine setIntegral_congr_fun measurableSet_Ioi fun x hx => ?_
   have hx0 : 0<x := zero_lt_one.trans hx
   have hxC := ofReal_ne_zero.mpr hx0.ne'
@@ -106,7 +110,6 @@ lemma landau {f x} B :
         linarith)
       (by simpa [closure_ball])) (by grind) (inl rfl) <| by cases n <;> grind
     have := differentiableAt hg <| closedBall_mem_nhds 0 <| by norm_num
-    rw [show ((fun x => x - q) * g) = fun z => (z - q) * g z by funext z; rfl]
     rw [logDeriv_mul] <;> first | fun_prop | simp_all [logDeriv_apply]
     grw [half_le_self <| by linarith] at ih0
     linarith
