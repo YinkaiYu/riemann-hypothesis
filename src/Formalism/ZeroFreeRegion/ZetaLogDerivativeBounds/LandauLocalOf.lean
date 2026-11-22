@@ -47,7 +47,8 @@ private theorem deriv_eq_zero_iff_mult_of_local_factor {f k : ℂ → ℂ} {ρ :
     exact ⟨fun _ => by omega, fun h => absurd rfl h⟩
 
 /-- The local logarithmic-derivative expansion, with zero multiplicities. -/
-theorem localZeroExpansionWithMultiplicity (hfac : ZeroFactor) (hlog : LogDerivBound) (f : ℂ → ℂ) (z₀ : ℂ) (r M : ℝ) (hr : 0 < r) (hM : 1 ≤ M)
+theorem localZeroExpansionWithMultiplicity (hfac : ZeroFactor) (hlog : LogDerivBound)
+    (f : ℂ → ℂ) (z₀ : ℂ) (r M : ℝ) (hr : 0 < r) (hM : 1 ≤ M)
     (hf : DifferentiableOn ℂ f (Metric.closedBall z₀ r)) (hf0 : f z₀ ≠ 0)
     (hbound : ∀ z ∈ Metric.closedBall z₀ r, ‖f z‖ ≤ M * ‖f z₀‖) :
     ∃ (Z : Finset ℂ) (m : ℂ → ℕ),
@@ -164,7 +165,7 @@ theorem localZeroExpansionWithMultiplicity (hfac : ZeroFactor) (hlog : LogDerivB
   calc ‖deriv h z / h z‖ ≤ 24 * Real.log M / (r / 3) := hlogb z hz6
     _ = 72 * Real.log M / r := by rw [div_div_eq_mul_div]; ring
 
-
+/-- The zeta argument needs the zero count and the error bound. -/
 theorem localZeroExpansionOfFactorization : LandauLocalOf := by
   intro hfactor hlog f z₀ r M hr hM hf hf₀ hb
   obtain ⟨Z, m, hZ, hm, _, _, hcount, herr⟩ :=

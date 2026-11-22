@@ -1,3 +1,10 @@
+/-
+Copyright (c) 2026 Yin-Kai Yu. Distributed under the Apache License, Version 2.0.
+SPDX-License-Identifier: Apache-2.0
+The Abel–Mellin identity and norm bound are adapted from Yin-Kai Yu's
+https://github.com/YinkaiYu/zeta-zero-free-lean/blob/v1.2.0/Solution.lean.
+This version reorganizes those proofs and adds a real-axis positivity lemma.
+-/
 import Mathlib.Analysis.Complex.HalfPlane
 import Mathlib.Analysis.MellinTransform
 import Mathlib.NumberTheory.Harmonic.ZetaAsymp
