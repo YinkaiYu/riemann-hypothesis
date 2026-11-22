@@ -15,7 +15,7 @@ jobs:
       MATHLIB_CACHE_GET_URL: https://cache.mathlib.org/mathlib4
       MODULE: Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound
       BASE: 2dea99006976a5104032e495d7513dee40fbb5ca
-      CANDIDATE: 3637696cc0acb815e697483682090a05062924ef
+      CANDIDATE: d4fa3841d45d222ce2c4a7f7c73d96a78cf04c55
     steps:
       - name: Obtain fixed project and unchanged source dependencies
         shell: bash
