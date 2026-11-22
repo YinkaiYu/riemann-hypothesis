@@ -1,0 +1,62 @@
+name: Verify the shared stabilizer volume proofs
+on:
+  push:
+    branches: [verification/stabilizer-4331]
+permissions:
+  contents: read
+jobs:
+  exact:
+    name: Build changed modules and mathematical clients
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      LEAN_ABORT_ON_PANIC: "1"
+      LAKE_ARTIFACT_CACHE: "false"
+      MATHLIB_CACHE_GET_URL: https://cache.mathlib.org/mathlib4
+      MODULE: Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.LogDerivBound
+      BASE: 2dea99006976a5104032e495d7513dee40fbb5ca
+      CANDIDATE: 3637696cc0acb815e697483682090a05062924ef
+    steps:
+      - name: Obtain fixed project and unchanged source dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --retry 3 -fsSL "https://codeload.github.com/YinkaiYu/riemann-hypothesis/tar.gz/$CANDIDATE" | tar -xz --strip-components=1
+          grep -Fx 'leanprover/lean4:v4.33.1' lean-toolchain
+          test "$(jq -r '.packages[] | select(.name == "mathlib") | .rev' lake-manifest.json)" = 0df444a360eaa60ab8c11dca51a86af692955474
+      - name: Install upstream toolchain
+        run: |
+          set -eu
+          curl --retry 4 -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -o "$RUNNER_TEMP/elan-init.sh"
+          sh "$RUNNER_TEMP/elan-init.sh" -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+          "$HOME/.elan/bin/lean" --version
+      - name: Fetch Mathlib's pinned official cache
+        run: |
+          set -eu
+          lake exe mathlib/cache get Mathlib
+          df -h .
+      - name: Build both proofs and three direct clients
+        run: lake build +Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.EventuallySmulSub:olean +Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.HenselCountHolds:olean +Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.ExistsUnifFv:olean +Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.LocDensHF:olean +Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.DensVTop:olean
+      - name: Replay the kernel and check axioms
+        shell: bash
+        run: |
+          set -eu
+          for m in Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.EventuallySmulSub Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.HenselCountHolds Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.ExistsUnifFv Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.LocDensHF Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.DensVTop; do lake env leanchecker "$m"; done
+          cat > CheckProofs.lean <<'EOF'
+          import Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.EventuallySmulSub
+          import Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.HenselCountHolds
+          import Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.ExistsUnifFv
+          import Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.LocDensHF
+          import Formalism.PeriodIntegrals.UnitaryGroupMassFormula.StabilizerOrbitVolume.DensVTop
+          import Lean.Util.CollectAxioms
+          open Lean in
+          run_cmd do
+            for decl in #[`PI.VolStabSW.filt_abstract, `PI.VolStabSW.hensel_main, `PI.VolStabSW.henselCount_holds] do
+              for axName in ← collectAxioms decl do
+                unless #[`propext, `Classical.choice, `Quot.sound].contains axName do
+                  throwError "unexpected axiom {axName} for {decl}"
+          #print axioms PI.VolStabSW.filt_abstract
+          #print axioms PI.VolStabSW.hensel_main
+          EOF
+          lake env lean CheckProofs.lean
